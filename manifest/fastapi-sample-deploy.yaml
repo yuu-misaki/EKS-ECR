@@ -1,0 +1,79 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: fastapi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: fastapi
+  labels:
+    app: fastapi-sample
+  name: fastapi-sample
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fastapi-sample
+  template:
+    metadata:
+      labels:
+        app: fastapi-sample
+    spec:
+      serviceAccountName: ecr-access # サービスアカウントを指定
+      containers:
+        - name: fastapi-sample
+          image: 062551304380.dkr.ecr.ap-northeast-1.amazonaws.com/fastapi:latest
+          ports:
+            - containerPort: 8080
+          resources:
+            requests: # リソースリクエストを追加
+              cpu: "0.1"
+              memory: "128Mi"
+            limits:
+              cpu: "0.2"
+              memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: fastapi
+  name: sample-fastapi-service
+spec:
+  ports:
+    - port: 80
+      targetPort: 8080 # containerPortと一致
+      protocol: TCP
+  type: NodePort
+  selector:
+    app: fastapi-sample # Deploymentのlabelsと一致
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  namespace: fastapi
+  name: ingress-fastapi
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+spec:
+  ingressClassName: alb
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: sample-fastapi-service
+                port:
+                  number: 80
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ecr-access
+  namespace: fastapi
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
