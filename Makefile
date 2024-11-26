@@ -36,7 +36,6 @@ cluster:
 
 .PHONY: delete-cluster
 delete-cluster:
-	eksctl delete nodegroup --cluster=${CLUSTER_NAME} --name=ng-default
 	eksctl delete cluster --name=${CLUSTER_NAME}
 
 
@@ -69,6 +68,14 @@ aws-load-balancer-controller:
 		--set serviceAccount.create=false \
 		--set serviceAccount.name=aws-load-balancer-controller
 
+.PHONY:delete-aws-load-balancer-controller
+delete-aws-load-balancer-controller:
+	helm uninstall aws-load-balancer-controller -n kube-system
+	kubectl delete -f crds.yaml
+	eksctl delete iamserviceaccount --cluster=${CLUSTER_NAME} \
+	--name=${SERVICE_ACCOUNT} \
+	--namespace=kube-system
+
 .PHONY:delete-iam-policy
 delete-iam-policy:
 	aws iam delete-policy --policy-arn arn:aws:iam::${AWS_ACCOUNT_ID}:policy/${POLICY_NAME}
@@ -92,6 +99,18 @@ app:
 	# sampleアプリのデプロイ
 	kubectl apply -f manifest/fastapi-sample-deploy.yaml
 
+.PHONY: update-app
+update-app:
+	# sampleイメージをamd64アーキテクチャでビルドして、ECRリポジトリにpush
+	docker buildx build --platform linux/amd64 -t ${SAMPLE_APP_NAME}:${TAG} --load .
+	aws ecr get-login-password --region ap-northeast-1 | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.ap-northeast-1.amazonaws.com
+	docker tag ${SAMPLE_APP_NAME}:${TAG} ${AWS_ACCOUNT_ID}.dkr.ecr.ap-northeast-1.amazonaws.com/${ECR_REPO_NAME}:${TAG}
+	docker push ${AWS_ACCOUNT_ID}.dkr.ecr.ap-northeast-1.amazonaws.com/${ECR_REPO_NAME}:${TAG}
+	
+	kubectl delete -f manifest/fastapi-sample-deploy.yaml
+	kubectl apply -f manifest/fastapi-sample-deploy.yaml
+	
+
 .PHONY: delete-app
 delete-app:
 	kubectl delete -f manifest/fastapi-sample-deploy.yaml
@@ -100,6 +119,6 @@ delete-app:
 all: cluster aws-load-balancer-controller ecr-repository app
 
 .PHONY: delete-all
-delete-all: delete-app delete-cluster delete-iam-policy delete-ecr-repository
+delete-all: delete-app delete-ecr-repository delete-aws-load-balancer-controller delete-cluster delete-iam-policy
 	rm -f crds.yaml
 	rm -f iam_policy.json
