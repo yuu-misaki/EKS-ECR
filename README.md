@@ -10,7 +10,7 @@ make allで以下アーキテクチャが展開される
 ![alt text](images/EKS-ECR.drawio.png)
 
 albを通じて、アプリケーションに接続できる
-
+![alt text](images/fastapi.png)
 
 k9sを利用して、kubernetesの管理ができる
 ![alt text](images/k9s.png)
