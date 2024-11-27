@@ -67,3 +67,7 @@ make delete-all
 
 
  
+## Thanks
+参考にさせていただいたリソース
+- https://github.com/yomon8/k8s-dev
+- https://zenn.dev/isana/articles/the-boy-and-the-eks
