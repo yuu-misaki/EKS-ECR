@@ -2,7 +2,7 @@
 name = "fastapi-sample"
 version = "0.1.0"
 description = ""
-authors = ["yomon8 <sebanngou8@gmail.com>"]
+authors = ["yu-min <misaki.yu@eneos.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
